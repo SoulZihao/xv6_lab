@@ -2,7 +2,62 @@
 #include "user/user.h"
 #include "kernel/fcntl.h"
 
-void memdump(char *fmt, char *data);
+void memdump(char *fmt, char *data){
+  int p=0;
+  unsigned char *udata=(unsigned char*)data;
+
+  for(;*fmt;++fmt){
+    switch (*fmt)
+    {
+    case 'i':{
+    int n = 0;
+    for(int i=0;i<4;++i){
+      n|=((unsigned int)udata[p + i])<<i*8;
+    }
+    printf("%d\n",n);
+    p+=4;
+    break;
+    }
+    case 'p':{
+    unsigned long long n = 0;
+    for(int i=0;i<8;++i){
+      n|=((unsigned long long)udata[p + i])<<i*8;
+    }
+    p+=8;
+    printf("%llx\n",n);
+      break;
+    }
+    case 'h':{
+    short n=(udata[p+1]<<8)|udata[p];
+    p+=2;
+    printf("%d\n",n);
+      break;
+    }
+    case 'c':{
+    printf("%c\n", udata[p]);
+    p+=1;
+      break;
+    }
+    case 's':{
+    unsigned long long n = 0;
+    for(int i=0;i<8;++i){
+      n|=((unsigned long long)udata[p + i])<<i*8;
+    }
+    p+=8;
+    char* addr=(char*)n;
+    printf("%s\n",addr);
+      break;
+    }
+    case 'S':{
+    printf("%s\n",&data[p]);
+    p += strlen(&data[p]) + 1;
+      break;
+    }
+    default:
+      break;
+    }
+  }
+}
 
 int
 main(int argc, char *argv[])
@@ -55,11 +110,4 @@ main(int argc, char *argv[])
     exit(1);
   }
   exit(0);
-}
-
-void
-memdump(char *fmt, char *data)
-{
-  // Your code here.
-
 }
