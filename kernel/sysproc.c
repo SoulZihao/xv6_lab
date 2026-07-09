@@ -105,3 +105,24 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_interpose(void)
+{
+  int mask;
+  char path[MAXPATH];
+
+  // 1. 提取第 0 个参数（整数 mask）
+  argint(0, &mask);
+    
+  // 2. 提取第 1 个参数（字符串 path，这次实验恒为 "-"，但必须提取出来，否则下个实验会报错）
+  if(argstr(1, path, sizeof(path)) < 0)
+    return -1;
+
+  struct proc *p = myproc();
+  // 3. 把掩码记录到当前进程的结构体中
+  p->sandbox_mask = mask;
+  safestrcpy(p->sand_path, path, sizeof(p->sand_path));
+
+  return 0; // 成功返回 0
+}

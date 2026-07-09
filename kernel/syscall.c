@@ -101,6 +101,7 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
+extern uint64 sys_interpose(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -126,6 +127,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_interpose] sys_interpose,
 };
 
 void
@@ -135,6 +137,27 @@ syscall(void)
   struct proc *p = myproc();
 
   num = p->trapframe->a7;
+
+  if (num > 0 && num < NELEM(syscalls) && (p->sandbox_mask & (1 << num))) {
+    if (strncmp(p->sand_path, "-",MAXPATH) == 0) {
+      p->trapframe->a0 = -1;
+      return; 
+    }
+    if (num == SYS_open || num == SYS_chdir || num == SYS_mkdir || num == SYS_unlink) {
+      char target_path[MAXPATH];
+      
+      // 【修复】安全提取第 0 个参数作为目标路径
+      if (argstr(0, target_path, sizeof(target_path)) >= 0) {
+        
+        // 使用 strcmp 检查当前打开的路径是否是沙箱禁制的路径
+        if (strncmp(p->sand_path, target_path,MAXPATH) != 0) {
+          p->trapframe->a0 = -1; // 精准拦截！
+          return;
+        }
+      }
+    }
+  }
+  
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0

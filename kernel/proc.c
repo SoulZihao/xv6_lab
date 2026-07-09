@@ -286,7 +286,7 @@ kfork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
-
+  np->sandbox_mask=p->sandbox_mask;
   pid = np->pid;
 
   release(&np->lock);
