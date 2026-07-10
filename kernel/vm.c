@@ -143,8 +143,36 @@ walkaddr(pagetable_t pagetable, uint64 va)
 
 #if defined(LAB_PGTBL) || defined(SOL_MMAP) || defined(SOL_COW)
 void
-vmprint(pagetable_t pagetable) {
-  // your code here
+vmprint_walk(pagetable_t pagetable, int level, uint64 base_va)
+{
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if(pte & PTE_V){
+      // 1. 打印缩进
+      for(int l = 2; l >= level; l--) printf(".. ");
+
+      // 2. 🔑 绝妙组合：利用 PXSHIFT 宏合成当前项的真实虚拟地址
+      uint64 va = base_va | ((uint64)i << PXSHIFT(level));
+
+      // 3. 🔑 降维打击：利用 %p 自动补零，直接完美契合官方输出格式
+      // 注意：因为 %p 自动带了 0x，所以前面千万不要手抖再写 0x 了
+      printf("%p: pte %p pa %p\n", (void*)va, (void*)pte, (void*)PTE2PA(pte));
+
+      // 4. 递归下一级
+      if(level > 0 && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+        uint64 child_pa = PTE2PA(pte);
+        vmprint_walk((pagetable_t)child_pa, level - 1, va);
+      }
+    }
+  }
+}
+
+void
+vmprint(pagetable_t pagetable)
+{
+  // 顶层根页表打印也直接用 %p
+  printf("page table %p\n", pagetable);
+  vmprint_walk(pagetable, 2, 0);
 }
 #endif
 
